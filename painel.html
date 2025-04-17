@@ -110,75 +110,77 @@
   </footer>
 
   <script>
-    const token = localStorage.getItem('token');
-    if (!token) {
-      alert('Você precisa estar logado para acessar esta página.');
-      window.location.href = 'login.html';
+   script>
+  const token = localStorage.getItem('token');
+  if (!token) {
+    alert('Você precisa estar logado para acessar esta página.');
+    window.location.href = 'login.html';
+  }
+
+  const backendURL = 'https://reciclagem-backend2.onrender.com';
+
+  // Carregar nome, histórico e total
+  window.onload = async () => {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      document.getElementById('nomeUsuario').textContent = `Olá, ${payload.nome}`;
+
+      // Histórico
+      const resHistorico = await fetch(`${backendURL}/api/coleta/historico`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const historico = await resHistorico.json();
+
+      const lista = document.getElementById('listaHistorico');
+      lista.innerHTML = historico.map(item => `
+        <div class="historico-item">
+          ${item.quantidade} litro(s) - ${new Date(item.data).toLocaleDateString()}
+        </div>
+      `).join('');
+
+      // Total de óleo
+      const resTotal = await fetch(`${backendURL}/api/coleta/total`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const totalData = await resTotal.json();
+      document.getElementById('totalOleo').textContent = totalData.total || 0;
+
+    } catch (err) {
+      console.error(err);
+      alert('Erro ao carregar dados do painel.');
     }
+  };
 
-    // Carregar nome, histórico e total
-    window.onload = async () => {
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        document.getElementById('nomeUsuario').textContent = `Olá, ${payload.nome}`;
+  // Registrar coleta
+  document.getElementById('formOleo').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const quantidade = document.getElementById('quantidade').value;
 
-        // Histórico
-        const resHistorico = await fetch('http://localhost:5000/api/coleta/historico', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const historico = await resHistorico.json();
+    try {
+      const res = await fetch(`${backendURL}/api/coleta/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ quantidade })
+      });
 
-        const lista = document.getElementById('listaHistorico');
-        lista.innerHTML = historico.map(item => `
-          <div class="historico-item">
-            ${item.quantidade} litro(s) - ${new Date(item.data).toLocaleDateString()}
-          </div>
-        `).join('');
-
-        // Total de óleo
-        const resTotal = await fetch('http://localhost:5000/api/coleta/total', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const totalData = await resTotal.json();
-        document.getElementById('totalOleo').textContent = totalData.total || 0;
-
-      } catch (err) {
-        console.error(err);
-        alert('Erro ao carregar dados do painel.');
+      const data = await res.json();
+      if (res.ok) {
+        alert(data.message || 'Coleta registrada!');
+        window.location.reload();
+      } else {
+        alert(data.message || 'Erro ao registrar.');
       }
-    };
-
-    // Registrar coleta
-        // Registrar coleta
-        document.getElementById('formOleo').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const quantidade = document.getElementById('quantidade').value;
-
-      try {
-        const res = await fetch('http://localhost:5000/api/coleta/register', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({ quantidade })
-        });
-
-        const data = await res.json();
-        if (res.ok) {
-          alert(data.message || 'Coleta registrada!');
-          window.location.reload();
-        } else {
-          alert(data.message || 'Erro ao registrar.');
-        }
-      } catch (error) {
-        console.error(error);
-        alert('Erro ao conectar com o servidor.');
-      }
-    });
-
-    function logout() {
-      localStorage.removeItem('token');
-      window.location.href = 'login.html';
+    } catch (error) {
+      console.error(error);
+      alert('Erro ao conectar com o servidor.');
     }
-  </script>
+  });
+
+  function logout() {
+    localStorage.removeItem('token');
+    window.location.href = 'login.html';
+  }
+</script>
